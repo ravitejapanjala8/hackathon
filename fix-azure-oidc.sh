@@ -17,9 +17,6 @@
 #   - Permissions to modify App Registrations in Azure AD
 # ============================================================================
 
-# Don't exit on error for interactive prompts
-set +e
-
 # Configuration - can be overridden by command-line arguments or environment variables
 APP_ID="${1:-${AZURE_APP_ID:-5efb8c81-5fd0-48b1-8235-5e835fe1143c}}"
 TENANT_ID="${2:-${AZURE_TENANT_ID:-cd1ccae1-8ae4-44bd-8872-50d073143c26}}"
@@ -61,7 +58,7 @@ check_prerequisites() {
     print_header "Checking Prerequisites"
     
     # Check if Azure CLI is installed
-    if ! command -v az &> /dev/null; then
+    if ! command -v az >/dev/null 2>&1; then
         print_error "Azure CLI is not installed"
         echo "Please install it from: https://docs.microsoft.com/cli/azure/install-azure-cli"
         exit 1
@@ -69,7 +66,7 @@ check_prerequisites() {
     print_success "Azure CLI is installed"
     
     # Check if logged in to Azure
-    if ! az account show &> /dev/null; then
+    if ! az account show >/dev/null 2>&1; then
         print_error "Not logged in to Azure"
         echo "Please run: az login"
         exit 1
