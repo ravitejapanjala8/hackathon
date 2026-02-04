@@ -1,0 +1,153 @@
+name: Deploy API to Azure APIM
+
+on:
+  workflow_run:
+    workflows: ["Deploy API to Azure Web App"]
+    types:
+      - completed
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'swagger.yaml'
+      - '.github/workflows/deploy-apim.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+env:
+  SWAGGER_FILE: swagger.yaml
+
+jobs:
+  deploy-to-apim:
+    name: Deploy API to Azure APIM
+    runs-on: ubuntu-latest
+    # Only run if the Web App deployment succeeded (when triggered by workflow_run)
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Validate Swagger file
+        run: |
+          echo "Validating OpenAPI specification..."
+          if [ ! -f "${{ env.SWAGGER_FILE }}" ]; then
+            echo "Error: Swagger file not found!"
+            exit 1
+          fi
+          echo "✓ Swagger file found: ${{ env.SWAGGER_FILE }}"
+          
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: Display Azure account info
+        run: |
+          echo "Logged in to Azure"
+          az account show
+          
+      - name: Get Web App URL
+        id: webapp-url
+        run: |
+          # Get the Web App URL to use as backend service
+          WEBAPP_URL=$(az webapp show \
+            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --query defaultHostName \
+            --output tsv 2>/dev/null || echo "")
+          
+          if [ -z "$WEBAPP_URL" ]; then
+            echo "Warning: Could not get Web App URL. Using default or provided SERVICE_URL."
+            SERVICE_URL="${{ secrets.SERVICE_URL || 'https://api.example.com' }}"
+          else
+            SERVICE_URL="https://$WEBAPP_URL"
+            echo "✓ Using Web App as backend: $SERVICE_URL"
+          fi
+          
+          echo "service_url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
+          
+      - name: Deploy to Azure APIM
+        shell: pwsh
+        run: |
+          Write-Host "Starting deployment to Azure APIM..."
+          Write-Host "Backend Service URL: ${{ env.SERVICE_URL }}"
+          
+          # Run the PowerShell deployment script
+          ./deploy-to-apim.ps1 `
+            -ResourceGroupName "${{ secrets.APIM_RESOURCE_GROUP || secrets.AZURE_RESOURCE_GROUP }}" `
+            -ApimServiceName "${{ secrets.APIM_SERVICE_NAME }}" `
+            -ApiId "${{ secrets.API_ID || 'sample-api' }}" `
+            -SwaggerFilePath "${{ env.SWAGGER_FILE }}" `
+            -ApiPath "${{ secrets.API_PATH || 'sample-api' }}" `
+            -ServiceUrl "${{ env.SERVICE_URL }}"
+            
+      - name: Test APIM Endpoint
+        run: |
+          echo "Waiting for APIM to be ready..."
+          sleep 20
+          
+          APIM_URL="https://${{ secrets.APIM_SERVICE_NAME }}.azure-api.net/${{ secrets.API_PATH || 'sample-api' }}"
+          
+          echo "Testing APIM health endpoint..."
+          curl -f "$APIM_URL/api/health" || echo "APIM health check not ready yet"
+          
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "## Deployment Successful! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The API has been successfully deployed to Azure APIM." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **APIM Service**: ${{ secrets.APIM_SERVICE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Resource Group**: ${{ secrets.APIM_RESOURCE_GROUP || secrets.AZURE_RESOURCE_GROUP }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Path**: ${{ secrets.API_PATH || 'sample-api' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend Service**: ${{ env.SERVICE_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Architecture" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "Client → APIM Gateway → Web App (Backend)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Access Your API" >> $GITHUB_STEP_SUMMARY
+          echo "Your API is now available through APIM at:" >> $GITHUB_STEP_SUMMARY
+          echo "- **APIM Gateway**: https://${{ secrets.APIM_SERVICE_NAME }}.azure-api.net/${{ secrets.API_PATH || 'sample-api' }}/api/health" >> $GITHUB_STEP_SUMMARY
+          echo "- **Direct Web App**: ${{ env.SERVICE_URL }}/api/health" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Recommended" >> $GITHUB_STEP_SUMMARY
+          echo "Use the APIM Gateway URL for all API access to benefit from:" >> $GITHUB_STEP_SUMMARY
+          echo "- Rate limiting and throttling" >> $GITHUB_STEP_SUMMARY
+          echo "- Authentication and authorization" >> $GITHUB_STEP_SUMMARY
+          echo "- Caching and transformation" >> $GITHUB_STEP_SUMMARY
+          echo "- Analytics and monitoring" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Deployment Failed
+        if: failure()
+        run: |
+          echo "## Deployment Failed ❌" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The deployment to Azure APIM failed. Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify Azure credentials are configured correctly" >> $GITHUB_STEP_SUMMARY
+          echo "- Check that APIM service name and resource group are correct" >> $GITHUB_STEP_SUMMARY
+          echo "- Ensure the service principal has appropriate permissions" >> $GITHUB_STEP_SUMMARY

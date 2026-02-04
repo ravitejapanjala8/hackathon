@@ -1,0 +1,146 @@
+================================================================================
+                        🌐 API TESTING URLS - SUMMARY
+================================================================================
+
+This file provides the URLs you need to test the Sample API.
+
+================================================================================
+                          LOCAL TESTING (Development)
+================================================================================
+
+🏠 BASE URL: http://localhost:5000
+
+📍 ENDPOINTS:
+
+  ✅ Health Check
+     GET http://localhost:5000/api/health
+  
+  ✅ Get All Users
+     GET http://localhost:5000/api/users
+  
+  ✅ Get User by ID
+     GET http://localhost:5000/api/users/1
+  
+  ✅ Create User
+     POST http://localhost:5000/api/users
+     Body: {"name":"John Doe","email":"john@example.com"}
+  
+  ✅ Update User
+     PUT http://localhost:5000/api/users/1
+     Body: {"name":"John Updated","email":"john.updated@example.com"}
+  
+  ✅ Delete User
+     DELETE http://localhost:5000/api/users/1
+
+🎨 SWAGGER UI (Interactive Testing):
+   http://localhost:5000/swagger
+
+================================================================================
+                    AZURE APIM TESTING (Production)
+================================================================================
+
+☁️ BASE URL: https://{your-apim-service-name}.azure-api.net/sample-api
+
+📍 ENDPOINTS:
+
+  ✅ Health Check
+     GET https://{your-apim-service}.azure-api.net/sample-api/api/health
+  
+  ✅ Get All Users
+     GET https://{your-apim-service}.azure-api.net/sample-api/api/users
+  
+  ✅ Get User by ID
+     GET https://{your-apim-service}.azure-api.net/sample-api/api/users/1
+  
+  ✅ Create User
+     POST https://{your-apim-service}.azure-api.net/sample-api/api/users
+  
+  ✅ Update User
+     PUT https://{your-apim-service}.azure-api.net/sample-api/api/users/1
+  
+  ✅ Delete User
+     DELETE https://{your-apim-service}.azure-api.net/sample-api/api/users/1
+
+================================================================================
+                            HOW TO USE
+================================================================================
+
+LOCAL TESTING:
+1. Start the API:
+   cd /path/to/hackathon
+   dotnet run
+
+2. Test in browser:
+   Open: http://localhost:5000/swagger
+
+3. Test with curl:
+   curl http://localhost:5000/api/health
+
+APIM TESTING (After Deployment):
+1. Find your APIM service name in Azure Portal or GitHub secrets
+
+2. Replace {your-apim-service} with actual name, e.g.:
+   https://my-apim-service.azure-api.net/sample-api/api/health
+
+3. Test with curl:
+   curl https://my-apim-service.azure-api.net/sample-api/api/health
+
+================================================================================
+                         QUICK TEST COMMANDS
+================================================================================
+
+# Local Testing
+curl http://localhost:5000/api/health
+curl http://localhost:5000/api/users
+
+# APIM Testing (replace YOUR-APIM-NAME)
+curl https://YOUR-APIM-NAME.azure-api.net/sample-api/api/health
+curl https://YOUR-APIM-NAME.azure-api.net/sample-api/api/users
+
+================================================================================
+                         EXAMPLE RESPONSES
+================================================================================
+
+Health Check:
+{
+  "status": "healthy",
+  "timestamp": "2026-02-04T05:29:26.819Z",
+  "service": "Sample API"
+}
+
+Get All Users:
+[
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com"
+  },
+  {
+    "id": 2,
+    "name": "Jane Smith",
+    "email": "jane@example.com"
+  }
+]
+
+================================================================================
+                       DETAILED DOCUMENTATION
+================================================================================
+
+📖 URLS.md           - Quick reference card
+📖 API-TESTING.md    - Complete testing guide with examples
+📖 README.md         - Full project documentation
+📖 QUICKSTART.md     - Quick start commands
+
+================================================================================
+                            ✅ TESTED
+================================================================================
+
+All endpoints have been tested and are working correctly:
+✅ Health Check - Returns service status
+✅ Get All Users - Returns list of users
+✅ Get User by ID - Returns specific user
+✅ Create User - Creates new user (with validation)
+✅ Update User - Updates user (with validation)
+✅ Delete User - Deletes user
+
+================================================================================
