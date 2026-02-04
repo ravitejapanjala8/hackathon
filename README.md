@@ -4,12 +4,18 @@ This repository contains a **C# ASP.NET Core Web API** that deploys to **Azure W
 
 ## 🚀 **Ready to Deploy?**
 
-✅ **Service Principal Created?** → See [DEPLOYMENT-CHECKLIST.md](DEPLOYMENT-CHECKLIST.md)
+### ⚡ **NEW: One-Click Manual Deployment Available!**
 
-Just 3 steps:
+You can now deploy directly from the GitHub Actions UI! 
+
+**📖 [HOW-TO-DEPLOY.md](HOW-TO-DEPLOY.md)** - Step-by-step guide with screenshots
+
+✅ **Quick Start:**
 1. Add 6 GitHub Secrets (5 min) - [CONFIGURE-SECRETS.md](CONFIGURE-SECRETS.md)
-2. Trigger deployment (1 min)
+2. Go to **Actions** tab → **🚀 Manual Deployment** → **Run workflow** (1 min)
 3. Test your API! (5-7 min deployment time)
+
+✅ **Service Principal Created?** → See [DEPLOYMENT-CHECKLIST.md](DEPLOYMENT-CHECKLIST.md)
 
 ## 🏗️ Architecture
 

@@ -1,0 +1,253 @@
+name: 🚀 Manual Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'What to deploy?'
+        required: true
+        type: choice
+        options:
+          - 'Both (Web App + APIM)'
+          - 'Web App Only'
+          - 'APIM Only'
+        default: 'Both (Web App + APIM)'
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+  SWAGGER_FILE: swagger.yaml
+
+jobs:
+  deploy-webapp:
+    name: 🌐 Deploy to Azure Web App
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.deploy_target == 'Both (Web App + APIM)' || github.event.inputs.deploy_target == 'Web App Only' }}
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    outputs:
+      webapp_url: ${{ steps.webapp-url.outputs.url }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+        
+      - name: 🔧 Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          
+      - name: 📦 Restore dependencies
+        run: dotnet restore
+        
+      - name: 🏗️ Build application
+        run: dotnet build --configuration Release --no-restore
+        
+      - name: 🧪 Run tests
+        run: dotnet test --no-build --verbosity normal --configuration Release
+        
+      - name: 📤 Publish application
+        run: dotnet publish --configuration Release --no-build --output ./publish
+        
+      - name: 🔐 Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: 🚀 Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          package: ./publish
+          
+      - name: 🔗 Get Web App URL
+        id: webapp-url
+        run: |
+          WEBAPP_URL=$(az webapp show --name ${{ secrets.AZURE_WEBAPP_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query defaultHostName --output tsv)
+          echo "url=https://$WEBAPP_URL" >> $GITHUB_OUTPUT
+          echo "WEBAPP_URL=https://$WEBAPP_URL" >> $GITHUB_ENV
+          echo "✅ Web App URL: https://$WEBAPP_URL"
+          
+      - name: ⏳ Wait for deployment to be ready
+        run: |
+          echo "Waiting for Web App to be ready..."
+          sleep 30
+          
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -f -s "${{ env.WEBAPP_URL }}/api/health" > /dev/null; then
+              echo "✅ Web App is responding!"
+              break
+            else
+              echo "⏳ Waiting for Web App to respond... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+              sleep 10
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            fi
+          done
+          
+      - name: 🧪 Test deployed API
+        run: |
+          echo "Testing deployed API endpoints..."
+          
+          echo "Testing health endpoint..."
+          curl -f "${{ env.WEBAPP_URL }}/api/health" || echo "⚠️ Health check failed"
+          
+          echo "Testing users endpoint..."
+          curl -f "${{ env.WEBAPP_URL }}/api/users" || echo "⚠️ Users endpoint failed"
+          
+      - name: ✅ Web App Deployment Summary
+        if: success()
+        run: |
+          echo "## 🎉 Web App Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The API has been successfully deployed to Azure Web App." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Access Your API" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base URL**: ${{ env.WEBAPP_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health Check**: ${{ env.WEBAPP_URL }}/api/health" >> $GITHUB_STEP_SUMMARY
+          echo "- **Users API**: ${{ env.WEBAPP_URL }}/api/users" >> $GITHUB_STEP_SUMMARY
+          echo "- **Swagger UI**: ${{ env.WEBAPP_URL }}/swagger" >> $GITHUB_STEP_SUMMARY
+
+  deploy-apim:
+    name: 🔗 Deploy to Azure APIM
+    runs-on: ubuntu-latest
+    needs: [deploy-webapp]
+    if: |
+      always() && 
+      (github.event.inputs.deploy_target == 'Both (Web App + APIM)' || github.event.inputs.deploy_target == 'APIM Only') &&
+      (needs.deploy-webapp.result == 'success' || needs.deploy-webapp.result == 'skipped')
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+        
+      - name: ✅ Validate Swagger file
+        run: |
+          echo "Validating OpenAPI specification..."
+          if [ ! -f "${{ env.SWAGGER_FILE }}" ]; then
+            echo "❌ Error: Swagger file not found!"
+            exit 1
+          fi
+          echo "✅ Swagger file found: ${{ env.SWAGGER_FILE }}"
+          
+      - name: 🔐 Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: 📋 Display Azure account info
+        run: |
+          echo "Logged in to Azure"
+          az account show
+          
+      - name: 🔗 Get Web App URL
+        id: webapp-url
+        run: |
+          # Get the Web App URL to use as backend service
+          WEBAPP_URL=$(az webapp show \
+            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --query defaultHostName \
+            --output tsv 2>/dev/null || echo "")
+          
+          if [ -z "$WEBAPP_URL" ]; then
+            if [ -z "${{ secrets.SERVICE_URL }}" ]; then
+              echo "❌ Error: Could not get Web App URL and SERVICE_URL secret is not set."
+              echo "Please ensure the Web App exists and is accessible, or configure SERVICE_URL secret."
+              exit 1
+            fi
+            echo "⚠️ Warning: Could not get Web App URL. Using provided SERVICE_URL."
+            SERVICE_URL="${{ secrets.SERVICE_URL }}"
+          else
+            SERVICE_URL="https://$WEBAPP_URL"
+            echo "✅ Using Web App as backend: $SERVICE_URL"
+          fi
+          
+          echo "service_url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
+          
+      - name: 🚀 Deploy to Azure APIM
+        shell: pwsh
+        run: |
+          Write-Host "Starting deployment to Azure APIM..."
+          Write-Host "Backend Service URL: ${{ env.SERVICE_URL }}"
+          
+          # Run the PowerShell deployment script
+          ./deploy-to-apim.ps1 `
+            -ResourceGroupName "${{ secrets.APIM_RESOURCE_GROUP || secrets.AZURE_RESOURCE_GROUP }}" `
+            -ApimServiceName "${{ secrets.APIM_SERVICE_NAME }}" `
+            -ApiId "${{ secrets.API_ID || 'sample-api' }}" `
+            -SwaggerFilePath "${{ env.SWAGGER_FILE }}" `
+            -ApiPath "${{ secrets.API_PATH || 'sample-api' }}" `
+            -ServiceUrl "${{ env.SERVICE_URL }}"
+            
+      - name: 🧪 Test APIM Endpoint
+        run: |
+          echo "Waiting for APIM to be ready..."
+          sleep 20
+          
+          APIM_URL="https://${{ secrets.APIM_SERVICE_NAME }}.azure-api.net/${{ secrets.API_PATH || 'sample-api' }}"
+          
+          echo "Testing APIM health endpoint..."
+          curl -f "$APIM_URL/api/health" || echo "⚠️ APIM health check not ready yet"
+          
+      - name: ✅ APIM Deployment Summary
+        if: success()
+        run: |
+          echo "## 🎉 APIM Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The API has been successfully deployed to Azure APIM." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Access Your API Through APIM" >> $GITHUB_STEP_SUMMARY
+          echo "- **APIM Gateway**: https://${{ secrets.APIM_SERVICE_NAME }}.azure-api.net/${{ secrets.API_PATH || 'sample-api' }}/api/health" >> $GITHUB_STEP_SUMMARY
+          echo "- **Direct Web App**: ${{ env.SERVICE_URL }}/api/health" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 💡 Recommendation" >> $GITHUB_STEP_SUMMARY
+          echo "Use the APIM Gateway URL for all API access to benefit from rate limiting, authentication, caching, and monitoring." >> $GITHUB_STEP_SUMMARY
+
+  deployment-complete:
+    name: 📊 Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-webapp, deploy-apim]
+    if: always()
+    
+    permissions:
+      contents: read
+    
+    steps:
+      - name: 📊 Final Summary
+        run: |
+          echo "## 🎯 Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Status:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web App**: ${{ needs.deploy-webapp.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **APIM**: ${{ needs.deploy-apim.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.deploy-webapp.result }}" = "success" ] || [ "${{ needs.deploy-apim.result }}" = "success" ]; then
+            echo "### ✅ Next Steps:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Test your API endpoints" >> $GITHUB_STEP_SUMMARY
+            echo "2. Verify APIM policies and settings in Azure Portal" >> $GITHUB_STEP_SUMMARY
+            echo "3. Monitor your deployment in Application Insights" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ Issues Detected" >> $GITHUB_STEP_SUMMARY
+            echo "Please check the logs above for any deployment errors." >> $GITHUB_STEP_SUMMARY
+          fi
