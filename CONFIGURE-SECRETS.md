@@ -23,7 +23,9 @@ Or manually:
 
 ### 2. Add Required Secrets
 
-You need to add **7 secrets**. Click "New repository secret" for each one:
+You need to add **7 values** to GitHub Secrets. Click "New repository secret" for each one:
+
+**Note**: The OIDC identifiers (client ID, tenant ID, subscription ID) are non-sensitive values that can be safely stored in GitHub Secrets for convenience. They are used to identify your Azure resources but do not provide access on their own.
 
 #### Secret 1: AZURE_CLIENT_ID
 
