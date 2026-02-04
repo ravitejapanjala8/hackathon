@@ -20,14 +20,27 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Add CORS policy
+// Add CORS policy - Configure allowed origins for production
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        // For development: Allow any origin
+        // For production: Replace with specific allowed origins
+        // Example: policy.WithOrigins("https://yourdomain.com")
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            // Configure specific origins for production
+            policy.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>())
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
 });
 
