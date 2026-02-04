@@ -229,6 +229,9 @@ jobs:
     needs: [deploy-webapp, deploy-apim]
     if: always()
     
+    permissions:
+      contents: read
+    
     steps:
       - name: 📊 Final Summary
         run: |
