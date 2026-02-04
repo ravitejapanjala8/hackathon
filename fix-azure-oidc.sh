@@ -7,20 +7,24 @@
 # GitHub Actions workflows to authenticate from any branch in the repository.
 #
 # Usage:
-#   ./fix-azure-oidc.sh
+#   ./fix-azure-oidc.sh [APP_ID] [TENANT_ID] [REPO_OWNER] [REPO_NAME]
+#
+# Example:
+#   ./fix-azure-oidc.sh 5efb8c81-5fd0-48b1-8235-5e835fe1143c cd1ccae1-8ae4-44bd-8872-50d073143c26 ravitejapanjala8 hackathon
 #
 # Requirements:
 #   - Azure CLI (az) installed and authenticated
 #   - Permissions to modify App Registrations in Azure AD
 # ============================================================================
 
-set -e  # Exit on any error
+# Don't exit on error for interactive prompts
+set +e
 
-# Configuration
-APP_ID="5efb8c81-5fd0-48b1-8235-5e835fe1143c"
-REPO_OWNER="ravitejapanjala8"
-REPO_NAME="hackathon"
-TENANT_ID="cd1ccae1-8ae4-44bd-8872-50d073143c26"
+# Configuration - can be overridden by command-line arguments or environment variables
+APP_ID="${1:-${AZURE_APP_ID:-5efb8c81-5fd0-48b1-8235-5e835fe1143c}}"
+TENANT_ID="${2:-${AZURE_TENANT_ID:-cd1ccae1-8ae4-44bd-8872-50d073143c26}}"
+REPO_OWNER="${3:-${GITHUB_REPO_OWNER:-ravitejapanjala8}}"
+REPO_NAME="${4:-${GITHUB_REPO_NAME:-hackathon}}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -95,12 +99,10 @@ list_existing_credentials() {
     echo "Listing existing federated credentials for app: $APP_ID"
     echo
     
-    CREDS=$(az ad app federated-credential list --id $APP_ID 2>&1)
-    
-    if [ $? -ne 0 ]; then
+    if ! CREDS=$(az ad app federated-credential list --id $APP_ID 2>&1); then
         print_error "Failed to list federated credentials"
         echo "$CREDS"
-        exit 1
+        return 1
     fi
     
     if [ "$CREDS" == "[]" ]; then
@@ -117,7 +119,14 @@ delete_old_credentials() {
     print_header "Deleting Old Federated Credentials"
     
     print_info "Fetching existing credentials..."
-    CRED_IDS=$(az ad app federated-credential list --id $APP_ID --query "[].id" -o tsv)
+    
+    if ! CREDS=$(az ad app federated-credential list --id $APP_ID 2>&1); then
+        print_error "Failed to list federated credentials"
+        echo "$CREDS"
+        return 1
+    fi
+    
+    CRED_IDS=$(echo "$CREDS" | jq -r '.[].id' 2>/dev/null)
     
     if [ -z "$CRED_IDS" ]; then
         print_info "No existing credentials to delete"

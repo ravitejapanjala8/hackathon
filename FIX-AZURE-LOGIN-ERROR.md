@@ -295,8 +295,8 @@ Contact your Azure admin if you don't have these permissions.
 
 ## 🎯 Summary
 
-**Problem**: Federated credential restricted to one branch  
-**Solution**: Update credential to allow all branches (or specific ones you need)  
+**Problem**: Federated credential restricted to one branch
+**Solution**: Update credential to allow all branches (or specific ones you need)
 **Result**: GitHub Actions can deploy from any branch 🚀
 
 Choose **Option 1** (allow all branches) for the quickest fix, or **Option 2** (specific branches) for better security.
