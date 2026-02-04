@@ -30,7 +30,7 @@ You'll see a list of workflows on the left sidebar. Click on one:
 1. After selecting a workflow, you'll see a **"Run workflow"** button on the right side
 2. Click the **"Run workflow"** dropdown button
 3. Select options:
-   - **Branch**: Choose your branch (e.g., `copilot/fix-deploy-option-in-actions`)
+   - **Branch**: Choose your branch (e.g., `main`, `develop`, or your feature branch)
    - **Deploy target** (for Manual Deployment only):
      - `Both (Web App + APIM)` - Full deployment (recommended)
      - `Web App Only` - Just deploy the backend

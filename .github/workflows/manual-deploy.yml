@@ -57,7 +57,6 @@ jobs:
         
       - name: 🧪 Run tests
         run: dotnet test --no-build --verbosity normal --configuration Release
-        continue-on-error: true
         
       - name: 📤 Publish application
         run: dotnet publish --configuration Release --no-build --output ./publish
@@ -170,8 +169,13 @@ jobs:
             --output tsv 2>/dev/null || echo "")
           
           if [ -z "$WEBAPP_URL" ]; then
-            echo "⚠️ Warning: Could not get Web App URL. Using default or provided SERVICE_URL."
-            SERVICE_URL="${{ secrets.SERVICE_URL || 'https://api.example.com' }}"
+            if [ -z "${{ secrets.SERVICE_URL }}" ]; then
+              echo "❌ Error: Could not get Web App URL and SERVICE_URL secret is not set."
+              echo "Please ensure the Web App exists and is accessible, or configure SERVICE_URL secret."
+              exit 1
+            fi
+            echo "⚠️ Warning: Could not get Web App URL. Using provided SERVICE_URL."
+            SERVICE_URL="${{ secrets.SERVICE_URL }}"
           else
             SERVICE_URL="https://$WEBAPP_URL"
             echo "✅ Using Web App as backend: $SERVICE_URL"
