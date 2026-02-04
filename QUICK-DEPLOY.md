@@ -19,7 +19,7 @@ Add at: https://github.com/ravitejapanjala8/hackathon/settings/secrets/actions
 | `APIM_SERVICE_NAME` | `apim-hackathon-dev` |
 | `APIM_RESOURCE_GROUP` | `rg-hackathon` |
 
-### Create Service Principal:
+### Create Service Principal (App Registration):
 ```bash
 az ad sp create-for-rbac \
   --name "github-hackathon-deploy" \
@@ -28,6 +28,8 @@ az ad sp create-for-rbac \
   --sdk-auth
 ```
 Copy the entire JSON output → add as `AZURE_CREDENTIALS` secret
+
+**Note**: This creates an App Registration in Azure Entra ID with a service principal. For more secure authentication using OIDC (no secrets), see [AZURE-AUTHENTICATION-GUIDE.md](AZURE-AUTHENTICATION-GUIDE.md).
 
 ## 🚀 Deploy
 

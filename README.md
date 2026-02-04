@@ -26,7 +26,12 @@ The API is deployed in two stages:
 **Ready to deploy?** You'll need:
 - Azure subscription with Web App and APIM services
 - GitHub repository secrets configured
-- Service principal with appropriate permissions
+- **App Registration (Service Principal)** in Azure Entra ID for authentication
+
+🔐 **Authentication**: GitHub Actions connects to Azure using an App Registration. See [AZURE-AUTHENTICATION-GUIDE.md](AZURE-AUTHENTICATION-GUIDE.md) for:
+- Understanding Service Principal vs App Registration
+- Current setup (Service Principal with Secret)
+- Alternative setup (OIDC/Federated Identity - more secure)
 
 See [DEPLOYMENT-REQUIREMENTS.md](DEPLOYMENT-REQUIREMENTS.md) for complete list of required information and [WEBAPP-APIM-DEPLOYMENT.md](WEBAPP-APIM-DEPLOYMENT.md) for step-by-step deployment guide.
 

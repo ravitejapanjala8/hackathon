@@ -2,6 +2,20 @@
 
 This guide provides step-by-step instructions to deploy using your specific Azure resources.
 
+## 🔐 Understanding Azure Authentication
+
+Before deploying, it's important to understand how GitHub Actions connects to Azure. We use **App Registration (Service Principal)** in Azure Entra ID for authentication.
+
+📖 **Read First**: [AZURE-AUTHENTICATION-GUIDE.md](AZURE-AUTHENTICATION-GUIDE.md) - Comprehensive guide explaining:
+- What is an App Registration vs Service Principal
+- Traditional method (Service Principal with Secret) - **Current setup**
+- Modern method (Federated Identity with OIDC) - More secure alternative
+- Comparison and recommendations
+
+**Quick Answer**: Yes, you need an App Registration in Azure Entra ID (formerly Azure AD). The `az ad sp create-for-rbac` command creates both the App Registration and Service Principal for you.
+
+---
+
 ## ✅ Your Azure Resources (Already Created)
 
 - **Subscription**: `d9a1f276-029e-4843-afe6-f5580c5d2519`
