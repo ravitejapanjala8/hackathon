@@ -101,14 +101,26 @@ jobs:
             -ServiceUrl "${{ env.SERVICE_URL }}"
             
       - name: Test APIM Endpoint
+        continue-on-error: true
         run: |
-          echo "Waiting for APIM to be ready..."
-          sleep 20
+          echo "Testing APIM endpoint..."
           
           APIM_URL="https://${{ secrets.APIM_SERVICE_NAME }}.azure-api.net/${{ secrets.API_PATH || 'sample-api' }}"
+          MAX_RETRIES=6
+          RETRY_COUNT=0
           
-          echo "Testing APIM health endpoint..."
-          curl -f "$APIM_URL/api/health" || echo "APIM health check not ready yet"
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -f -s "$APIM_URL/api/health" > /dev/null 2>&1; then
+              echo "✓ APIM health check passed!"
+              exit 0
+            else
+              echo "Waiting for APIM to be ready... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+              sleep 5
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            fi
+          done
+          
+          echo "APIM health check not ready yet"
           
       - name: Deployment Summary
         if: success()
