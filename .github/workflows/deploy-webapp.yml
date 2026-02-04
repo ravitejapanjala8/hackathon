@@ -1,0 +1,149 @@
+name: Deploy API to Azure Web App
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - '**.cs'
+      - '**.csproj'
+      - 'Program.cs'
+      - 'appsettings.json'
+      - '.github/workflows/deploy-webapp.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy to Azure Web App
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          
+      - name: Restore dependencies
+        run: dotnet restore
+        
+      - name: Build application
+        run: dotnet build --configuration Release --no-restore
+        
+      - name: Run tests
+        run: dotnet test --no-build --verbosity normal --configuration Release
+        continue-on-error: true
+        
+      - name: Publish application
+        run: dotnet publish --configuration Release --no-build --output ./publish
+        
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          package: ./publish
+          
+      - name: Get Web App URL
+        id: webapp-url
+        run: |
+          WEBAPP_URL=$(az webapp show --name ${{ secrets.AZURE_WEBAPP_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query defaultHostName --output tsv)
+          echo "url=https://$WEBAPP_URL" >> $GITHUB_OUTPUT
+          echo "WEBAPP_URL=https://$WEBAPP_URL" >> $GITHUB_ENV
+          
+      - name: Wait for deployment to be ready
+        run: |
+          echo "Waiting for Web App to be ready..."
+          sleep 30
+          
+          # Test the health endpoint
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -f -s "${{ env.WEBAPP_URL }}/api/health" > /dev/null; then
+              echo "✓ Web App is responding!"
+              break
+            else
+              echo "Waiting for Web App to respond... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
+              sleep 10
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            fi
+          done
+          
+      - name: Test deployed API
+        run: |
+          echo "Testing deployed API endpoints..."
+          
+          echo "Testing health endpoint..."
+          curl -f "${{ env.WEBAPP_URL }}/api/health" || echo "Health check failed"
+          
+          echo "Testing users endpoint..."
+          curl -f "${{ env.WEBAPP_URL }}/api/users" || echo "Users endpoint failed"
+          
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "## Deployment Successful! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The API has been successfully deployed to Azure Web App." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web App Name**: ${{ secrets.AZURE_WEBAPP_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Resource Group**: ${{ secrets.AZURE_RESOURCE_GROUP }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **.NET Version**: ${{ env.DOTNET_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Access Your API" >> $GITHUB_STEP_SUMMARY
+          echo "Your API is now live at:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base URL**: ${{ env.WEBAPP_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health Check**: ${{ env.WEBAPP_URL }}/api/health" >> $GITHUB_STEP_SUMMARY
+          echo "- **Users API**: ${{ env.WEBAPP_URL }}/api/users" >> $GITHUB_STEP_SUMMARY
+          echo "- **Swagger UI**: ${{ env.WEBAPP_URL }}/swagger" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Test the API endpoints above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Deploy to APIM using the 'Deploy to APIM' workflow" >> $GITHUB_STEP_SUMMARY
+          echo "3. APIM will use this Web App URL as the backend service" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Deployment Failed
+        if: failure()
+        run: |
+          echo "## Deployment Failed ❌" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The deployment to Azure Web App failed. Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Common Issues" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify Azure credentials are configured correctly" >> $GITHUB_STEP_SUMMARY
+          echo "- Check that Web App name and resource group are correct" >> $GITHUB_STEP_SUMMARY
+          echo "- Ensure the Web App exists in Azure" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify the service principal has appropriate permissions" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Required Secrets" >> $GITHUB_STEP_SUMMARY
+          echo "- AZURE_CREDENTIALS" >> $GITHUB_STEP_SUMMARY
+          echo "- AZURE_WEBAPP_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- AZURE_RESOURCE_GROUP" >> $GITHUB_STEP_SUMMARY

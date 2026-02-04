@@ -1,14 +1,34 @@
 # Azure APIM Hackathon - Sample API
 
-This repository contains a **C# ASP.NET Core Web API** that automatically deploys to **Azure API Management (APIM)** using GitHub Actions.
+This repository contains a **C# ASP.NET Core Web API** that deploys to **Azure Web App** and automatically onboards to **Azure API Management (APIM)** using GitHub Actions.
+
+## 🏗️ Architecture
+
+```
+Client → Azure APIM (Gateway) → Azure Web App (Backend API)
+```
+
+The API is deployed in two stages:
+1. **Deploy to Azure Web App** - Backend service hosting the API
+2. **Deploy to APIM** - API Gateway that proxies requests to the Web App
 
 ## 🌐 Testing URLs
 
 **Want to test the API?** See [URLS.md](URLS.md) for a quick reference or [API-TESTING.md](API-TESTING.md) for the complete testing guide.
 
 - **Local**: `http://localhost:5000/api/health`
+- **Web App**: `https://{your-webapp}.azurewebsites.net/api/health`
 - **APIM**: `https://{your-apim-service}.azure-api.net/sample-api/api/health`
 - **Swagger UI**: `http://localhost:5000/swagger` (when running locally)
+
+## 📋 Deployment Requirements
+
+**Ready to deploy?** You'll need:
+- Azure subscription with Web App and APIM services
+- GitHub repository secrets configured
+- Service principal with appropriate permissions
+
+See [DEPLOYMENT-REQUIREMENTS.md](DEPLOYMENT-REQUIREMENTS.md) for complete list of required information and [WEBAPP-APIM-DEPLOYMENT.md](WEBAPP-APIM-DEPLOYMENT.md) for step-by-step deployment guide.
 
 ## 🚀 Features
 
