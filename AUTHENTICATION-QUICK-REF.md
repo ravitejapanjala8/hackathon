@@ -116,14 +116,24 @@ az ad sp create --id $APP_ID
 # 3. Assign permissions
 az role assignment create --assignee $APP_ID --role Contributor --scope /subscriptions/d9a1f276-029e-4843-afe6-f5580c5d2519/resourceGroups/rg-hackathon
 
-# 4. Create Federated Credential
+# 4. Create Federated Credential (for all branches)
 az ad app federated-credential create --id $APP_ID --parameters '{
-  "name": "github-federation",
+  "name": "github-federation-all-branches",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:ravitejapanjala8/hackathon:ref:refs/heads/copilot/build-sample-api-onboard-apim",
+  "subject": "repo:ravitejapanjala8/hackathon:ref:refs/heads/*",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+
+# Also create for pull requests
+az ad app federated-credential create --id $APP_ID --parameters '{
+  "name": "github-federation-prs",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:ravitejapanjala8/hackathon:pull_request",
   "audiences": ["api://AzureADTokenExchange"]
 }'
 ```
+
+**⚠️ Important**: Using `*` allows deployments from all branches. For a specific branch only, replace `*` with the branch name. See [FIX-AZURE-LOGIN-ERROR.md](FIX-AZURE-LOGIN-ERROR.md) if you're getting authentication errors.
 
 ---
 
