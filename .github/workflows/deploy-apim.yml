@@ -19,7 +19,7 @@ on:
     inputs:
       environment:
         description: 'Deployment environment'
-        required: true
+        required: false
         default: 'dev'
         type: choice
         options:
