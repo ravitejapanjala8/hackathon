@@ -184,22 +184,51 @@ az role assignment create \
 
 #### Step 3: Create Federated Identity Credential
 
+**⚠️ Important**: To support deployments from **all branches** (recommended for flexibility), use a wildcard pattern:
+
 ```bash
-# Create federated credential for GitHub Actions
+# Create federated credential for all branches
 az ad app federated-credential create \
   --id $APP_ID \
   --parameters '{
-    "name": "github-hackathon-federation",
+    "name": "github-hackathon-all-branches",
     "issuer": "https://token.actions.githubusercontent.com",
-    "subject": "repo:ravitejapanjala8/hackathon:ref:refs/heads/copilot/build-sample-api-onboard-apim",
+    "subject": "repo:ravitejapanjala8/hackathon:ref:refs/heads/*",
     "audiences": ["api://AzureADTokenExchange"],
-    "description": "GitHub Actions federation for hackathon repository"
+    "description": "GitHub Actions federation for all branches in hackathon repository"
+  }'
+
+# Also create one for pull requests
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters '{
+    "name": "github-hackathon-pull-requests",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:ravitejapanjala8/hackathon:pull_request",
+    "audiences": ["api://AzureADTokenExchange"],
+    "description": "GitHub Actions federation for pull requests"
   }'
 ```
 
-**Important**: The `subject` field specifies which GitHub repo/branch can use this credential. Format:
-- For branch: `repo:OWNER/REPO:ref:refs/heads/BRANCH_NAME`
-- For PR: `repo:OWNER/REPO:pull_request`
+**Alternative (More Restrictive)**: For a specific branch only:
+```bash
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters '{
+    "name": "github-hackathon-main",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:ravitejapanjala8/hackathon:ref:refs/heads/main",
+    "audiences": ["api://AzureADTokenExchange"],
+    "description": "GitHub Actions federation for main branch"
+  }'
+```
+
+**⚠️ Common Issue**: If your federated credential is configured for a specific branch but your workflows run from different branches, you'll get an authentication error. See **[FIX-AZURE-LOGIN-ERROR.md](FIX-AZURE-LOGIN-ERROR.md)** for the complete fix.
+
+**Subject Pattern Reference**:
+- For all branches: `repo:OWNER/REPO:ref:refs/heads/*`
+- For specific branch: `repo:OWNER/REPO:ref:refs/heads/BRANCH_NAME`
+- For all PRs: `repo:OWNER/REPO:pull_request`
 - For environment: `repo:OWNER/REPO:environment:ENVIRONMENT_NAME`
 
 #### Step 4: Configure GitHub Secrets

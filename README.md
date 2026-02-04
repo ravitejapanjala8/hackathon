@@ -2,6 +2,19 @@
 
 This repository contains a **C# ASP.NET Core Web API** that deploys to **Azure Web App** and automatically onboards to **Azure API Management (APIM)** using GitHub Actions.
 
+## ⚠️ **Getting "Azure Login Failed" Error?**
+
+If you're seeing this error when running GitHub Actions workflows:
+```
+Login failed with Error: Using auth-type: SERVICE_PRINCIPAL. Not all values are present.
+```
+
+**👉 [FIX-AZURE-LOGIN-ERROR.md](FIX-AZURE-LOGIN-ERROR.md)** - Complete fix guide with automated script
+
+**Quick Fix:** The federated credential in Azure needs to be updated to allow all branches. Run the provided script or follow the manual steps in the guide.
+
+---
+
 ## 🚀 **Ready to Deploy?**
 
 ### ⚡ **NEW: One-Click Manual Deployment Available!**
@@ -11,9 +24,10 @@ You can now deploy directly from the GitHub Actions UI!
 **📖 [HOW-TO-DEPLOY.md](HOW-TO-DEPLOY.md)** - Step-by-step guide with screenshots
 
 ✅ **Quick Start:**
-1. Add 6 GitHub Secrets (5 min) - [CONFIGURE-SECRETS.md](CONFIGURE-SECRETS.md)
-2. Go to **Actions** tab → **🚀 Manual Deployment** → **Run workflow** (1 min)
-3. Test your API! (5-7 min deployment time)
+1. Add 7 GitHub Secrets (5 min) - [CONFIGURE-SECRETS.md](CONFIGURE-SECRETS.md)
+2. Fix Azure OIDC credentials if needed - [FIX-AZURE-LOGIN-ERROR.md](FIX-AZURE-LOGIN-ERROR.md)
+3. Go to **Actions** tab → **🚀 Manual Deployment** → **Run workflow** (1 min)
+4. Test your API! (5-7 min deployment time)
 
 ✅ **Service Principal Created?** → See [DEPLOYMENT-CHECKLIST.md](DEPLOYMENT-CHECKLIST.md)
 
