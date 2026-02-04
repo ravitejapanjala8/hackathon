@@ -84,7 +84,7 @@ jobs:
         run: |
           echo "Waiting for Web App to be ready..."
           
-          MAX_RETRIES=12
+          MAX_RETRIES=10
           RETRY_COUNT=0
           
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
