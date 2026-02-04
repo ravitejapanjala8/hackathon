@@ -2,6 +2,14 @@
 
 This repository contains a **C# ASP.NET Core Web API** that automatically deploys to **Azure API Management (APIM)** using GitHub Actions.
 
+## 🌐 Testing URLs
+
+**Want to test the API?** See [URLS.md](URLS.md) for a quick reference or [API-TESTING.md](API-TESTING.md) for the complete testing guide.
+
+- **Local**: `http://localhost:5000/api/health`
+- **APIM**: `https://{your-apim-service}.azure-api.net/sample-api/api/health`
+- **Swagger UI**: `http://localhost:5000/swagger` (when running locally)
+
 ## 🚀 Features
 
 - **Sample REST API** built with ASP.NET Core 8.0
