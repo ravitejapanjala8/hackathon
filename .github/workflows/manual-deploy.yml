@@ -64,7 +64,10 @@ jobs:
       - name: 🔐 Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+          client-secret: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+          tenant-id: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
+          subscription-id: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
           
       - name: 🚀 Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
@@ -151,7 +154,10 @@ jobs:
       - name: 🔐 Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+          client-secret: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
+          tenant-id: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
+          subscription-id: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
           
       - name: 📋 Display Azure account info
         run: |
