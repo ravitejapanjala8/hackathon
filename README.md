@@ -2,6 +2,15 @@
 
 This repository contains a **C# ASP.NET Core Web API** that deploys to **Azure Web App** and automatically onboards to **Azure API Management (APIM)** using GitHub Actions.
 
+## 🚀 **Ready to Deploy?**
+
+✅ **Service Principal Created?** → See [DEPLOYMENT-CHECKLIST.md](DEPLOYMENT-CHECKLIST.md)
+
+Just 3 steps:
+1. Add 6 GitHub Secrets (5 min) - [CONFIGURE-SECRETS.md](CONFIGURE-SECRETS.md)
+2. Trigger deployment (1 min)
+3. Test your API! (5-7 min deployment time)
+
 ## 🏗️ Architecture
 
 ```
