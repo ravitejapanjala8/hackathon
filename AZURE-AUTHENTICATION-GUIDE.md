@@ -21,17 +21,20 @@ When GitHub Actions needs to deploy resources to Azure, it requires authenticati
 | **Expiration** | ⚠️ Secrets can expire | ✅ No expiration |
 | **Azure Setup** | App Registration + Secret | App Registration + Federated Credential |
 | **GitHub Workflow** | Use `creds` parameter | Use `client-id`, `tenant-id`, `subscription-id` |
-| **Recommended For** | Quick setup, testing | Production, enhanced security |
+| **Current Status** | ❌ Deprecated in this repo | ✅ **CURRENTLY IN USE** |
+| **Recommended For** | Quick setup, testing | **Production, enhanced security** |
 
 ### 🎯 Recommendation
-- **For Testing/Quick Setup**: Use Service Principal with Secret
-- **For Production**: Use Federated Identity with OIDC (more secure)
+- **For Production**: Use Federated Identity with OIDC (✅ **CURRENTLY CONFIGURED**)
+- **For Testing/Quick Setup**: Use Service Principal with Secret (legacy)
 
 ---
 
-## Method 1: Service Principal with Secret (Current Setup)
+## Method 1: Service Principal with Secret (Legacy)
 
-This is what the repository currently uses. It's the traditional method where you create an App Registration (Service Principal) and generate a client secret.
+**⚠️ Note**: This repository has migrated to OIDC (Method 2). This section is kept for reference only.
+
+This is the traditional method where you create an App Registration (Service Principal) and generate a client secret.
 
 ### What Happens:
 1. You create an App Registration in Azure Entra ID (formerly Azure AD)
@@ -105,7 +108,14 @@ az ad sp create-for-rbac \
 
 ---
 
-## Method 2: Federated Identity with OIDC (Recommended for Production)
+## Method 2: Federated Identity with OIDC (✅ Currently Configured)
+
+**✅ This repository uses OIDC authentication** - the newer, more secure method that doesn't require storing any secrets in GitHub.
+
+### Current Configuration:
+- **Client ID**: `5efb8c81-5fd0-48b1-8235-5e835fe1143c`
+- **Tenant ID**: `cd1ccae1-8ae4-44bd-8872-50d073143c26`
+- **Subscription ID**: `d9a1f276-029e-4843-afe6-f5580c5d2519`
 
 This is the newer, more secure method that doesn't require storing any secrets in GitHub.
 
@@ -196,23 +206,18 @@ az ad app federated-credential create \
 
 Add these secrets to GitHub (NO client secret needed!):
 
-1. `AZURE_CLIENT_ID`: The Application (Client) ID from Step 1
+1. `AZURE_CLIENT_ID`: `5efb8c81-5fd0-48b1-8235-5e835fe1143c` (✅ Already configured)
 2. `AZURE_TENANT_ID`: `cd1ccae1-8ae4-44bd-8872-50d073143c26`
 3. `AZURE_SUBSCRIPTION_ID`: `d9a1f276-029e-4843-afe6-f5580c5d2519`
 
-#### Step 5: Update GitHub Workflow
+**✅ The workflows in this repository are already configured to use these OIDC secrets.**
 
-Replace the Azure Login step in `.github/workflows/deploy-webapp.yml` and `.github/workflows/deploy-apim.yml`:
+#### Step 5: GitHub Workflow Configuration
 
-**Old way (Service Principal with Secret):**
-```yaml
-- name: Azure Login
-  uses: azure/login@v1
-  with:
-    creds: ${{ secrets.AZURE_CREDENTIALS }}
-```
+**✅ The workflows in this repository are already configured for OIDC.**
 
-**New way (OIDC):**
+The Azure Login step in `.github/workflows/deploy-webapp.yml`, `.github/workflows/deploy-apim.yml`, and `.github/workflows/manual-deploy.yml` uses:
+
 ```yaml
 - name: Azure Login
   uses: azure/login@v1
@@ -222,16 +227,11 @@ Replace the Azure Login step in `.github/workflows/deploy-webapp.yml` and `.gith
     subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 ```
 
-**Also add permissions to the job:**
+All jobs have the required `id-token: write` permission:
 ```yaml
-jobs:
-  build-and-deploy:
-    name: Build and Deploy to Azure Web App
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-      id-token: write  # ← Required for OIDC!
+permissions:
+  contents: read
+  id-token: write  # ✅ Required for OIDC!
 ```
 
 ### What Gets Created in Azure:
@@ -293,15 +293,20 @@ Even if you're just deploying to a Web App or APIM, the **identity management** 
 
 ### Q: Which method is the current setup using?
 
-The current repository uses **Method 1: Service Principal with Secret**. The workflows use:
+The current repository uses **Method 2: Federated Identity with OIDC** (✅ Currently configured). The workflows use:
 ```yaml
-creds: ${{ secrets.AZURE_CREDENTIALS }}
+client-id: ${{ secrets.AZURE_CLIENT_ID }}
+tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 ```
 
-This means you need to create the service principal and store the JSON credentials in GitHub Secrets.
+The configured client ID is: `5efb8c81-5fd0-48b1-8235-5e835fe1143c`
 
 ### Q: How do I migrate from Service Principal to OIDC?
 
+**✅ Already completed!** This repository has already been migrated to OIDC authentication. The workflows now use OIDC instead of service principal secrets.
+
+If you're migrating another repository, follow these steps:
 1. Create new App Registration (without secret)
 2. Set up Federated Credential
 3. Update GitHub Secrets (replace AZURE_CREDENTIALS with CLIENT_ID, TENANT_ID, SUBSCRIPTION_ID)
@@ -343,7 +348,7 @@ az role assignment create \
 - ✅ You need to deploy immediately
 - ✅ Your organization hasn't adopted OIDC yet
 
-**Use Federated Identity with OIDC if:**
+**Use Federated Identity with OIDC if:** (✅ **Currently configured**)
 - ✅ You're setting up production workloads
 - ✅ Security is a primary concern
 - ✅ You want to avoid secret management overhead
@@ -376,18 +381,18 @@ az role assignment create \
 
 ## 💡 Summary
 
-**Current Setup**: This repository uses **Service Principal with Secret** (Method 1)
+**Current Setup**: This repository uses **Federated Identity with OIDC** (✅ Method 2)
 
 **To Deploy with Current Setup**:
-1. Run: `az ad sp create-for-rbac --name "github-hackathon-deploy" --role contributor --scopes /subscriptions/d9a1f276-029e-4843-afe6-f5580c5d2519/resourceGroups/rg-hackathon --sdk-auth`
-2. Copy entire JSON output
-3. Add as `AZURE_CREDENTIALS` secret in GitHub
+1. Ensure the OIDC app registration (client ID: 5efb8c81-5fd0-48b1-8235-5e835fe1143c) has contributor access to the resource group
+2. Ensure a federated credential is configured for your GitHub repository
+3. Add the required GitHub secrets (AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID)
 4. Deploy!
 
-**To Upgrade to OIDC** (More Secure):
-1. Follow Method 2 steps above
-2. Update workflow files
-3. Test thoroughly
-4. Remove old credentials
+**Security Benefits**:
+- ✅ No secrets stored in GitHub
+- ✅ Short-lived tokens (~1 hour)
+- ✅ No rotation needed
+- ✅ Better audit trail
 
-Both methods use **App Registration** in **Azure Entra ID** - the difference is how authentication credentials are handled (secret vs. federated identity).
+Both methods use **App Registration** in **Azure Entra ID** - the difference is how authentication credentials are handled (secret vs. federated identity). This repository is configured to use the more secure federated identity approach.

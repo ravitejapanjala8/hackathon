@@ -2,11 +2,11 @@
 
 ## ⚠️ SECURITY NOTICE
 
-**NEVER commit credentials to your repository!** The service principal details you provided contain sensitive information that must be stored securely in GitHub Secrets.
+**This repository uses OIDC (OpenID Connect) authentication** - a modern, secure method that does NOT require storing secrets in GitHub. You only need to configure a few non-sensitive identifiers.
 
 ---
 
-## ✅ Step-by-Step: Add Your Service Principal to GitHub Secrets
+## ✅ Step-by-Step: Configure OIDC Authentication
 
 ### 1. Navigate to GitHub Secrets
 
@@ -23,36 +23,35 @@ Or manually:
 
 ### 2. Add Required Secrets
 
-You need to add **6 secrets**. Click "New repository secret" for each one:
+You need to add **7 values** to GitHub Secrets. Click "New repository secret" for each one:
 
-#### Secret 1: AZURE_CREDENTIALS
+**Note**: The OIDC identifiers (client ID, tenant ID, subscription ID) are non-sensitive values that can be safely stored in GitHub Secrets for convenience. They are used to identify your Azure resources but do not provide access on their own.
 
-**Name:** `AZURE_CREDENTIALS`
+#### Secret 1: AZURE_CLIENT_ID
 
-**Value:** Copy and paste your service principal JSON (the one you already have). It should look like this:
+**Name:** `AZURE_CLIENT_ID`
 
-```json
-{
-  "clientId": "fedc81fc-7f7a-44db-92c7-ab1dfeaa488d",
-  "clientSecret": "<your-client-secret-here>",
-  "subscriptionId": "d9a1f276-029e-4843-afe6-f5580c5d2519",
-  "tenantId": "cd1ccae1-8ae4-44bd-8872-50d073143c26",
-  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
-  "resourceManagerEndpointUrl": "https://management.azure.com/",
-  "activeDirectoryGraphResourceId": "https://graph.windows.net/",
-  "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
-  "galleryEndpointUrl": "https://gallery.azure.com/",
-  "managementEndpointUrl": "https://management.core.windows.net/"
-}
+**Value:**
+```
+5efb8c81-5fd0-48b1-8235-5e835fe1143c
 ```
 
-**Use the complete JSON** that you received when creating the service principal (including your actual clientSecret value).
-
-**Important**: Include the opening `{` and closing `}` braces!
+This is the Application (Client) ID of the OIDC App Registration that has been created with contributor access.
 
 ---
 
-#### Secret 2: AZURE_SUBSCRIPTION_ID
+#### Secret 2: AZURE_TENANT_ID
+
+**Name:** `AZURE_TENANT_ID`
+
+**Value:**
+```
+cd1ccae1-8ae4-44bd-8872-50d073143c26
+```
+
+---
+
+#### Secret 3: AZURE_SUBSCRIPTION_ID
 
 **Name:** `AZURE_SUBSCRIPTION_ID`
 
@@ -63,7 +62,7 @@ d9a1f276-029e-4843-afe6-f5580c5d2519
 
 ---
 
-#### Secret 3: AZURE_WEBAPP_NAME
+#### Secret 4: AZURE_WEBAPP_NAME
 
 **Name:** `AZURE_WEBAPP_NAME`
 
@@ -74,7 +73,7 @@ sample-api-hackathon-dev-g7hxepb4atexfvb5
 
 ---
 
-#### Secret 4: AZURE_RESOURCE_GROUP
+#### Secret 5: AZURE_RESOURCE_GROUP
 
 **Name:** `AZURE_RESOURCE_GROUP`
 
@@ -85,7 +84,7 @@ rg-hackathon
 
 ---
 
-#### Secret 5: APIM_SERVICE_NAME
+#### Secret 6: APIM_SERVICE_NAME
 
 **Name:** `APIM_SERVICE_NAME`
 
@@ -96,7 +95,7 @@ apim-hackathon-dev
 
 ---
 
-#### Secret 6: APIM_RESOURCE_GROUP
+#### Secret 7: APIM_RESOURCE_GROUP
 
 **Name:** `APIM_RESOURCE_GROUP`
 
@@ -111,21 +110,22 @@ rg-hackathon
 
 After adding all secrets, verify you have:
 
-- [ ] AZURE_CREDENTIALS (JSON with clientId, clientSecret, etc.)
+- [ ] AZURE_CLIENT_ID (5efb8c81-5fd0-48b1-8235-5e835fe1143c)
+- [ ] AZURE_TENANT_ID (cd1ccae1-8ae4-44bd-8872-50d073143c26)
 - [ ] AZURE_SUBSCRIPTION_ID (d9a1f276-029e-4843-afe6-f5580c5d2519)
 - [ ] AZURE_WEBAPP_NAME (sample-api-hackathon-dev-g7hxepb4atexfvb5)
 - [ ] AZURE_RESOURCE_GROUP (rg-hackathon)
 - [ ] APIM_SERVICE_NAME (apim-hackathon-dev)
 - [ ] APIM_RESOURCE_GROUP (rg-hackathon)
 
-**Total: 6 secrets**
+**Total: 7 secrets**
 
 ---
 
 ## 🔍 How to Verify Secrets Are Added
 
 1. Go to: https://github.com/ravitejapanjala8/hackathon/settings/secrets/actions
-2. You should see all 6 secrets listed
+2. You should see all 7 secrets listed
 3. You won't be able to view the values (GitHub hides them for security)
 4. You'll see when each was last updated
 
@@ -204,9 +204,10 @@ Watch the deployment progress:
 ### Issue: Workflow Fails with "Azure Login Failed"
 
 **Solution**: Check that:
-1. All 6 secrets are added correctly
-2. AZURE_CREDENTIALS contains valid JSON (with braces)
-3. No extra spaces or characters in the values
+1. All 7 secrets are added correctly
+2. AZURE_CLIENT_ID, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID match the OIDC app registration values
+3. The OIDC app registration has a federated credential configured for your GitHub repository
+4. No extra spaces or characters in the values
 
 ### Issue: "Resource Not Found"
 
@@ -217,24 +218,31 @@ Watch the deployment progress:
 
 ### Issue: "Insufficient Permissions"
 
-**Solution**: Verify the service principal has permissions:
+**Solution**: Verify the OIDC app registration (client ID: 5efb8c81-5fd0-48b1-8235-5e835fe1143c) has Contributor permissions:
 ```bash
 az role assignment list \
-  --assignee fedc81fc-7f7a-44db-92c7-ab1dfeaa488d \
+  --assignee 5efb8c81-5fd0-48b1-8235-5e835fe1143c \
   --scope /subscriptions/d9a1f276-029e-4843-afe6-f5580c5d2519/resourceGroups/rg-hackathon \
   --output table
 ```
 
 Should show "Contributor" role.
 
+### Issue: "Federated Credential Not Found"
+
+**Solution**: Ensure the OIDC app registration has a federated credential configured for your GitHub repository. The credential should specify:
+- **Issuer**: `https://token.actions.githubusercontent.com`
+- **Subject**: `repo:ravitejapanjala8/hackathon:ref:refs/heads/main` (or your branch name)
+- **Audiences**: `["api://AzureADTokenExchange"]`
+
 ---
 
 ## 🔐 Security Best Practices
 
 ### ✅ DO:
-- Store credentials in GitHub Secrets (you're doing this!)
+- Use OIDC authentication (you're doing this!) - no secrets to manage
+- Store identifiers in GitHub Secrets for convenience
 - Use least-privilege permissions
-- Rotate secrets periodically (every 1-2 years)
 - Monitor access logs in Azure
 
 ### ❌ DON'T:
@@ -242,6 +250,12 @@ Should show "Contributor" role.
 - Share credentials in chat/email/docs
 - Use the same credentials for multiple environments
 - Give more permissions than needed
+
+### 🎉 Benefits of OIDC:
+- **No Secrets**: Nothing sensitive stored in GitHub
+- **No Rotation**: No secrets to rotate or manage
+- **Short-lived Tokens**: Temporary tokens (~1 hour) that can't be reused
+- **Better Security**: Modern authentication standard
 
 ---
 
@@ -256,8 +270,8 @@ Should show "Contributor" role.
 
 ## ✅ Summary
 
-1. ✅ Service principal created (you've done this!)
-2. ⏳ Add 6 secrets to GitHub (do this now)
+1. ✅ OIDC app registration created with client ID: 5efb8c81-5fd0-48b1-8235-5e835fe1143c
+2. ⏳ Add 7 secrets to GitHub (do this now)
 3. ⏳ Trigger deployment
 4. ⏳ Verify endpoints work
 
@@ -275,4 +289,4 @@ If you encounter issues:
 
 ---
 
-**Security Reminder**: This document will be committed to the repository, but it only contains instructions. Your actual credentials are safely stored in GitHub Secrets and never appear in the code.
+**Security Reminder**: This repository uses OIDC authentication - no secrets are stored! The client ID and other identifiers in GitHub Secrets are non-sensitive and only used to establish trusted connections.
